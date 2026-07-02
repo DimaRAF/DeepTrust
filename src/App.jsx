@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar.jsx";
-import HeroSection from "./components/HeroSection.jsx";import UploadSection from "./components/ UploadSection.jsx";
+import HeroSection from "./components/HeroSection.jsx";
+import UploadSection from "./components/UploadSection.jsx";
 import ResultsSection from "./components/ResultsSection.jsx";
 import HowItWorks from "./components/HowItWorks.jsx";
 import Footer from "./components/Footer.jsx";
