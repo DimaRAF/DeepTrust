@@ -1,18 +1,23 @@
-from fastapi import FastAPI, UploadFile, File
-import os
-import shutil
+from pathlib import Path
 import traceback
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+
+from audio_processor import (
+    save_uploaded_file,
+    preprocess_audio,
+    delete_file,
+)
 
 from database import (
     save_audio_file,
     save_result,
     get_all_results,
-    get_result_by_id
+    get_result_by_id,
 )
 
 from predict import predict_audio
 from schemas import UploadResponse, AnalysisResponse
-
 app = FastAPI()
 
 
@@ -27,48 +32,43 @@ def home():
 # -----------------------------
 # Upload Audio
 # -----------------------------
-
 @app.post("/upload", response_model=UploadResponse)
 def upload_file(file: UploadFile = File(...)):
+    file_path = None
+
     try:
         print("1- Request received")
 
-        # إنشاء مجلد uploads إذا لم يكن موجودًا
-        os.makedirs("uploads", exist_ok=True)
+        # Validate the audio file and save it safely
+        file_path, file_size = save_uploaded_file(file)
 
-        file_path = os.path.join("uploads", file.filename)
+        print("2- File validated and saved")
+        print(f"Saved path: {file_path}")
+        print(f"File size: {file_size} bytes")
 
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        print("2- File saved")
-
-        file_size = os.path.getsize(file_path)
-
-        print("3- File size calculated")
-
+        # Save file information in the database
         save_audio_file(
             file_name=file.filename,
-            file_path=file_path,
+            file_path=str(file_path),
             file_size=file_size,
-            analysis_id=None
+            analysis_id=None,
         )
 
-        print("4- Saved to database")
+        print("3- Saved to database")
 
         return {
             "message": "File uploaded successfully",
-            "filename": file.filename
+            "filename": file_path.name,
         }
 
-    except Exception as e:
-        print("========== ERROR ==========")
-        print(str(e))
-        traceback.print_exc()
-        print("===========================")
-        raise e
+    except Exception as error:
+     delete_file(file_path)
 
-
+    print("========== ERROR ==========")
+    print(str(error))
+    traceback.print_exc()
+    print("===========================")
+    raise
 # -----------------------------
 # Get Results
 # -----------------------------
@@ -86,22 +86,41 @@ def get_result(id: int):
 # -----------------------------
 # Analyze Audio
 # -----------------------------
-
 @app.post("/analyze")
 async def analyze_audio(file_name: str):
+    safe_file_name = Path(file_name).name
 
-    audio_path = os.path.join("uploads", file_name)
-
-    result = predict_audio(audio_path)
-
-    save_result(
-        file_name=file_name,
-        result=result["prediction"],
-        confidence=result["confidence"]
+    original_path = (
+        Path(__file__).resolve().parent
+        / "uploads"
+        / safe_file_name
     )
 
-    return {
-        "file_name": file_name,
-        "result": result["prediction"],
-        "confidence": result["confidence"]
-    }
+    processed_path = None
+
+    if not original_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Audio file was not found.",
+        )
+
+    try:
+        processed_path = preprocess_audio(original_path)
+
+        result = predict_audio(str(processed_path))
+
+        save_result(
+            file_name=safe_file_name,
+            result=result["prediction"],
+            confidence=result["confidence"],
+        )
+
+        return {
+            "file_name": safe_file_name,
+            "result": result["prediction"],
+            "confidence": result["confidence"],
+        }
+
+    finally:
+        delete_file(original_path)
+        delete_file(processed_path)
