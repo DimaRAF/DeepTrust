@@ -74,6 +74,10 @@ A live demo video of the project is available at the following link:
 
 🔗 https://drive.google.com/file/d/1CXiHxnEGqbmMaWCnyXWfOgkYvSNQwtD8/view?usp=sharing
 
+A live demo of the API & AI model is available at the following link:
+
+🔗 https://drive.google.com/file/d/18wbCP8Gh_Y5MYc1s9SPflzh20WESNo3U/view?usp=drive_link
+
 
 ---
 
