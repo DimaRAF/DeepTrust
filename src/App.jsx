@@ -5,6 +5,7 @@ import UploadSection from "./components/UploadSection.jsx";
 import ResultsSection from "./components/ResultsSection.jsx";
 import HowItWorks from "./components/HowItWorks.jsx";
 import Footer from "./components/Footer.jsx";
+
 export default function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -13,9 +14,15 @@ export default function App() {
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);
+    setResult(null);
   };
 
-  const handleAnalyze = () => {
+  const handleResetFile = () => {
+    setSelectedFile(null);
+    setResult(null);
+  };
+
+  const handleAnalyze = async () => {
     if (!selectedFile) {
       alert("Please upload an audio file first.");
       return;
@@ -24,37 +31,49 @@ export default function App() {
     setIsAnalyzing(true);
     setResult(null);
 
-setTimeout(() => {
-  const fakeResult = {
-    prediction: "Fake Audio",
-    confidence: "94%",
-    riskScore: "High",
-    transcript:
-      "Hello, this audio appears to contain synthesized speech characteristics with unnatural transitions and spectral inconsistencies.",
-    warning:
-      "Potential synthetic speech patterns detected. Review the transcript and risk indicators before making a final judgment.",
-  };
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-  const realResult = {
-    prediction: "Real Audio",
-    confidence: "88%",
-    riskScore: "Low",
-    transcript:
-      "This recording appears natural, with consistent speech flow and no obvious signs of synthetic generation.",
-    warning:
-      "No major deepfake indicators detected in this sample. Continue reviewing context if needed.",
-  };
+      const response = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        body: formData,
+      });
 
-  setResult(Math.random() > 0.5 ? fakeResult : realResult);
+      if (!response.ok) {
+        throw new Error("Analysis failed");
+      }
+
+      const text = await response.text();
+console.log("Backend response:", text);
+
+const data = JSON.parse(text);
+
+console.log(data);
+
+setResult({
+  prediction: data.prediction,
+  confidence: `${data.confidence}%`,
+  riskScore: data.prediction === "Fake" ? "High" : "Low",
+  transcript: "No transcript available.",
+  warning:
+    data.prediction === "Fake"
+      ? "Potential AI-generated audio detected."
+      : "No significant AI indicators detected.",
+});
+
+
+} catch (error) {
+  console.error(error);
+
+  if (error instanceof Error) {
+    alert(error.message);
+  } else {
+    alert(String(error));
+  }
+} finally {
   setIsAnalyzing(false);
-}, 2000);
-
-
-
- 
-
-
-
+}
   };
 
   return (
@@ -69,9 +88,13 @@ setTimeout(() => {
           isAnalyzing={isAnalyzing}
           onFileChange={handleFileChange}
           onAnalyze={handleAnalyze}
+          onResetFile={handleResetFile}
         />
 
-        <ResultsSection result={result} isAnalyzing={isAnalyzing} />
+        <ResultsSection
+          result={result}
+          isAnalyzing={isAnalyzing}
+        />
 
         <HowItWorks />
       </main>
