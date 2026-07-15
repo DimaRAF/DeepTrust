@@ -85,7 +85,7 @@ A live demo of the API & AI model is available at the following link:
 
 Please follow the setup guide before running the project:
 
-🔗 https://drive.google.com/file/d/1b4zZkrXeOEoIo4bUlP0c9J8f3m6IT5y1/view?usp=drive_link
+🔗 https://drive.google.com/file/d/1CXtPdXxLLnA49lKSUwAWzOrEXPlwJkMZ/view?usp=sharing
 
 ---
 
