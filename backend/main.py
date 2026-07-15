@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import os
 import logging
@@ -32,6 +33,15 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -179,52 +189,48 @@ def get_result(id: int):
 # -----------------------------
 # Analyze Audio
 # -----------------------------
-
 @app.post("/analyze")
-async def analyze_audio(file_name: str):
+async def analyze_audio(file: UploadFile = File(...)):
     logger.info(
         "Analysis request received: filename=%s",
-        file_name,
+        file.filename,
     )
 
-    audio_path = os.path.join("uploads", file_name)
-
-    if not os.path.exists(audio_path):
-        logger.warning(
-            "Analysis rejected because file was not found: filename=%s",
-            file_name,
-        )
-
-        raise HTTPException(
-            status_code=404,
-            detail="Audio file not found.",
-        )
-
-    allowed_extensions = {
-        ".wav",
-        ".flac",
-        ".mp3",
-        ".m4a",
-        ".ogg",
-        ".webm",
-    }
-
-    extension = os.path.splitext(file_name)[1].lower()
-
-    if extension not in allowed_extensions:
-        logger.warning(
-            "Analysis rejected because extension is unsupported: "
-            "filename=%s extension=%s",
-            file_name,
-            extension,
-        )
-
-        raise HTTPException(
-            status_code=400,
-            detail="Only valid audio files can be analyzed.",
-        )
+    file_path = None
 
     try:
+        # حفظ الملف باستخدام نفس الدالة الموجودة عندك
+        file_path, file_size = save_uploaded_file(file)
+
+        file_name = file_path.name
+        audio_path = str(file_path)
+
+        allowed_extensions = {
+            ".wav",
+            ".flac",
+            ".mp3",
+            ".m4a",
+            ".ogg",
+            ".webm",
+        }
+
+        extension = os.path.splitext(file_name)[1].lower()
+
+        if extension not in allowed_extensions:
+            delete_file(file_path)
+
+            logger.warning(
+                "Analysis rejected because extension is unsupported: "
+                "filename=%s extension=%s",
+                file_name,
+                extension,
+            )
+
+            raise HTTPException(
+                status_code=400,
+                detail="Only valid audio files can be analyzed.",
+            )
+
         logger.info(
             "Audio analysis started: filename=%s",
             file_name,
@@ -247,8 +253,7 @@ async def analyze_audio(file_name: str):
         )
 
         return {
-            "file_name": file_name,
-            "result": result["prediction"],
+            "prediction": result["prediction"],
             "confidence": result["confidence"],
         }
 
@@ -258,10 +263,13 @@ async def analyze_audio(file_name: str):
     except Exception as error:
         logger.exception(
             "Audio analysis failed: filename=%s",
-            file_name,
+            file.filename,
         )
 
         raise HTTPException(
             status_code=400,
             detail="The file could not be analyzed as valid audio.",
         ) from error
+
+    finally:
+        delete_file(file_path)
