@@ -1,10 +1,10 @@
-version: "3.9"
-
 services:
 
   postgres:
     image: postgres:16
     container_name: deeptrust_postgres
+
+    restart: unless-stopped
 
     environment:
       POSTGRES_USER: postgres
@@ -18,10 +18,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    build:
-      context: ./backend
-
+    image: dima12004/deeptrust-backend:latest
     container_name: deeptrust_backend
+
+    restart: unless-stopped
 
     depends_on:
       - postgres
@@ -32,20 +32,17 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:1234@postgres:5432/deeptrust
 
-
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-
+    image: dima12004/deeptrust-frontend:latest
     container_name: deeptrust_frontend
+
+    restart: unless-stopped
 
     depends_on:
       - backend
 
     ports:
       - "5173:5173"
-
 
 volumes:
   postgres_data:
