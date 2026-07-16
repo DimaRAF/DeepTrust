@@ -64,7 +64,6 @@ The system analyzes uploaded voice recordings and:
 - ASVspoof
 
 ---
----
 
 ## Docker Deployment
 
