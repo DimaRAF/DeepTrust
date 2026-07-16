@@ -80,7 +80,7 @@ The project is fully containerized using Docker.
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/DeepTrust.git
+git clone https://github.com/DimaRAF/DeepTrust.git
 ```
 
 Navigate to the project folder:
